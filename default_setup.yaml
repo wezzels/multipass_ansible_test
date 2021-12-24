@@ -1,0 +1,32 @@
+#cloud-config
+users:
+  - default
+  - name: ubuntu
+    gecos: Ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    shell: /bin/bash
+    ssh_import_id: None
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-rsa AAAA <SSL Key>
+package_update: true
+package_upgrade: true
+write_files:
+  # Validate SSL inception is in place.
+  - path: /tmp/check_ca-cert.sh
+    permissions: "0755"
+    content: |
+            #!/bin/bash
+            . /etc/os-release
+            if [[ "$ID_LIKE" == *"debian"* ]]; then
+              awk -v cmd='openssl x509 -noout -subject' '
+                /BEGIN/{close(cmd)};{print | cmd}' < /etc/ssl/certs/ca-certificates.crt
+            elif [[ "$ID_LIKE" == *"rhel"* ]]; then
+              awk -v cmd='openssl x509 -noout -subject' '
+                /BEGIN/{close(cmd)};{print | cmd}' < /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+            else
+              echo "Linux type not detected."
+            fi
+runcmd:
+  - "if [ `bash /tmp/check_ca-cert.sh | grep -c HOME-CA-CERT` -ge 1 ]; then touch /root/cert-installed.txt; fi"

@@ -1,0 +1,32 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Install Packages if Debian variety
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'nginx', 'vim' ]
+      tags: [ 'setup' ]
+      when: ansible_distribution_file_variety == 'Debian'
+    - name: Install Packages if RedHat variety
+      yum: name={{ item }} update_cache=yes state=latest
+      loop: [ 'nginx', 'vim' ]
+      tags: [ 'setup' ]
+      when: ansible_distribution_file_variety == 'RedHat'
+    - name: Copy index page for Debian
+      copy:
+        src: index.html
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      tags: [ 'update', 'sync' ]
+      when: ansible_distribution_file_variety == 'Debian'
+    - name: Copy index page for RedHat
+      copy:
+        src: index.html
+        dest: /usr/share/nginx/html/index.html
+        owner: nginx
+        group: nginx
+        mode: '0644'
+      tags: [ 'update', 'sync' ]
+      when: ansible_distribution_file_variety == 'RedHat'
